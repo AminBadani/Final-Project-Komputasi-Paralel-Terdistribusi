@@ -10,20 +10,18 @@ Perhitungan matematika iteratif memerlukan perulangan (*looping*) untuk mendapat
 2. Sistem Terdistribusi (*distributed system*): membagi data yang akan diproses ke beberapa komputer (*worker*)
 
 ### Skema kasar 
-<!-- <img src="public/Skema-Kasar_Horizontal.png" width="500" alt="Skema Kasar - Horizontal" style="display: block;" /> -->
-<!-- <br> -->
 ```mermaid
 flowchart LR
   A([Start]) --> B(Input data yang akan diproses)
-  B --> C[Algoritma untuk **mendsitribusikan**  data secara rata] 
+  B --> C["`Algoritma untuk **mendsitribusikan**  data secara rata`"] 
   C --> 
-    D["**Worker 1:** 
+    D["`**Worker 1:** 
     * Core 1
-    * Core n"] & E["**Worker 2:** 
+    * Core n`"] & E["`**Worker 2:** 
     * Core 1
-    * Core n"] & F["**Worker n:** 
+    * Core n`"] & F["`**Worker n:** 
     * Core 1
-    * Core n"]
+    * Core n`"]
   D & E & F --> G[Output hasil yang digabungkan] 
   G --> Z([end])
 ```
