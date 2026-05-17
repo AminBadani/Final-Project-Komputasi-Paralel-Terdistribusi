@@ -1,75 +1,63 @@
-#include <exception>
+#include <cstdio>
 #include <iostream>
-#include <cstdlib>
-#include <stdexcept>
 #include <omp.h>
+#include <mpi.h>
+
+#include "master.h"
 
 void clearscreen() {
     std::cout << "\033[2J\033[1;1H";
 }
 
 int main(int argc, char** argv) {
-    std::cin.exceptions(std::ios::failbit | std::ios::badbit);
+    MPI_Init(&argc, &argv);
+    
+    int world_rank; 
+    int world_size;
+    int world_len;
+    char current_node_name[MPI_MAX_PROCESSOR_NAME];
 
-    bool exit = false;
-    int count = 10;
-    int cores = 1;
-    int workers = 2;
+    MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+    MPI_Get_processor_name( current_node_name, &world_len );
+    current_node_name[world_len] = '\0';
+    
+    SystemConfig config = SystemConfig{100, 4, world_size, false};
 
-    try {
-        if (argc > 1) count = std::atoi(argv[1]);
-        if (argc > 2) cores = std::atoi(argv[2]) > 4 ? 4 : std::atoi(argv[2]);
-        if (argc > 2) workers = std::atoi(argv[3]) > 2 ? 2 : std::atoi(argv[3]);
-    } catch (const std::invalid_argument&) {
-        std::cerr << "Invalid integer argument\n";
-        return 0;
-    }
+    bool system_running = true;
+    
+    while (system_running == true) {
+        int command = 0; // 0 = idle; 1 = execute; 2 = exit
 
-    while (exit == false) {
-        char pilihan = '\0';
-        
-        std::cout << "\n---- Program Menjumlahkan Bilangan Akar ----\n";
-        std::cout << "Count = " << count << "\n";
-        std::cout << "Cores = " << cores << "\n";
-        std::cout << "Workers = " << workers << "\n";
-        std::cout << "-- Menu --\n";
-        std::cout << "1). Jumlahkan bilangan akar\n";
-        std::cout << "2). Edit konfigurasi\n";
-        std::cout << "3). Exit\n";
-
-        std::cout << "Masukkan pilihan (1, 2, 3): ";
-        std::cin >> pilihan;
-
-        try {
-            if (pilihan == '1') {
-                #pragma omp parallel for num_threads(cores)
-                for (int i = 0; i < count; i++) {
-                    int thread_num = omp_get_thread_num();
-                    std::cout << "From: " << thread_num << " - Hello world " << i << "\n";
-                }
-
-            } else if (pilihan == '2') {
-                std::cout << "Masukkan count (saat ini: " <<  count << ") = "; std::cin >> count;
-                std::cout << "Masukkan cores (saat ini: " <<  cores << ") = "; std::cin >> cores;
-                std::cout << "Masukkan workers (saat ini: " <<  workers << ") = "; std::cin >> workers;
-
-            } else if (pilihan == '3') {
-                std::cout << "Exit\n";
-                exit = true;
-
-            } else {
-                std::cout << "Pilihan tidak ada\n";
-                continue;
+        if (world_rank == 0) {
+            // Master collects names from all other ranks
+            char worker_node_name[MPI_MAX_PROCESSOR_NAME];
+            for (int i = 1; i < world_size; i++) {
+                MPI_Recv(worker_node_name, MPI_MAX_PROCESSOR_NAME, MPI_CHAR, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                printf("Rank %d is running on container: %s\n", i, worker_node_name);
             }
 
-        } catch (const std::exception& e) {
-            std::cin.clear();
-            std::string junk;
-            std::getline(std::cin, junk);
-            std::cout << "Terjadi error '" << e.what() << "'\n";
+            show_menu(config);
+            if (config.exit_signal == true) command = 2;
+            else command = 1; 
+
+        } else {
+            MPI_Send(current_node_name, MPI_MAX_PROCESSOR_NAME, MPI_CHAR, 0, 0, MPI_COMM_WORLD);
+        }
+
+        // 2. Broadcast the command and config from Master (0) to ALL workers
+        MPI_Bcast(&command, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Bcast(&config, sizeof(SystemConfig), MPI_BYTE, 0, MPI_COMM_WORLD);
+
+        if (command == 1) {
             continue;
+
+        } else if (command == 2) {
+            system_running = false;
+            break;
         }
     }
 
-    return 1;
+    MPI_Finalize();
+    return 0;
 }
