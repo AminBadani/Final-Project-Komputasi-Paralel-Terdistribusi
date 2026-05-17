@@ -29,16 +29,19 @@ flowchart LR
 4. Menggabungkan kembali hasil yang ada pada seluruh *worker*: `contoh: hasil perhitungan pada masing-masing worker digabung menjadi satu`
 
 ## Development
-### Untuk menjalankan project menggunakan Docker:
+### Docker:
 * Jalankan container: `docker compose up -d --build`
 * Periksa container: `docker ps -a`
 * Masuk ke dalam container Ubuntu: `docker exec -it mpi_master /bin/bash`
 * Berhentikan container: `docker compose down`
-### Untuk menjalankan project menggunakan Podman:
+### Podman:
 * Jalankan container: `podman-compose up -d --build`
 * Periksa container: `podman ps -a`
 * Masuk ke dalam container Ubuntu: `podman exec -it mpi_master /bin/bash`
 * Berhentikan container: `podman-compose down`
+### Run
+* Compile program: `make`
+* Run program: `mpirun --host mpi-master,mpi-worker1,mpi-worker2 --map-by node -n 3 main`
 
 ## Kontributor
 1. Khairullah (2430306030012)
