@@ -1,21 +1,21 @@
-## Progress Log — [17 Mei 2026]
+## Progress Log — [18 Mei 2026]
 
 ### Dikerjakan Hari Ini
-- Impelementasi send (*workers*) - receive (*master*) untuk menampilkan detail *workers* yang tersedia
-- Implementasi broadcast input data `SystemConfig` dari *master* ke seluruh *workers*
-- Merapikan struktur program dengan membuat file `master.h`, berisi `struct SystemConfig` dan `void show_menu()`
+- Implementasi komputasi paralel sesuai *rank* (*start* dan *end*) di masing-masing *workers*
+- `MPI_Reduce()` untuk menggabungkan (menjumlahkan) seluruh hasil dari setiap *workers* 
+- Menggabungkan kembali `master.h` ke dalam file `main.cpp`
 - Fix bug: -
 - Unit test: -
 
 ### Kendala / Blockers
-- Deskripsi: -
+- Deskripsi: `std::cout` pada *workers* lambat, terkadang output baru muncul pada perulangan berikutnya
 - Solusi: -
 
 ### Rencana Besok
-- Implementasi komputasi paralel di masing-masing *workers*
-- Reduce/Gather hasil seluruh *workers* ke *master* 
+- Menyelesaikan masalah `std::cout` yang terlambat ditampilkan
+- Impelementasi testing 
 
 ### Commit Hari Ini
-- feat: 
+- feat: Komputasi paralel pada *workers* dan `MPI_Reduce()`
 - fix: -
 - test: -
