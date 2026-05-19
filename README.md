@@ -41,7 +41,8 @@ flowchart LR
 * Berhentikan container: `podman-compose down`
 ### Run
 * Compile program: `make`
-* Run program: `mpirun --host mpi-master,mpi-worker1,mpi-worker2 --map-by node -n 3 main`
+* Run program: `mpirun --host mpi-master,mpi-worker1,mpi-worker2 --map-by node -n 3 bin/main`
+* Test program: `bin/test`
 
 ## Kontributor
 1. Khairullah (2430306030012)
