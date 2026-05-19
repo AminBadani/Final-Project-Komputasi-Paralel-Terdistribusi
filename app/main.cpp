@@ -1,9 +1,10 @@
-#include <cmath>
 #include <cstdio>
 #include <ios>
 #include <iostream>
 #include <omp.h>
 #include <mpi.h>
+
+#include "parallel.h"
 
 struct SystemConfig {
     long long total_numbers;
@@ -46,6 +47,8 @@ void show_menu(SystemConfig &config) {
         config.exit_signal = true;
     }
 }
+
+
 
 int main(int argc, char** argv) {
     MPI_Init(&argc, &argv);
@@ -91,23 +94,15 @@ int main(int argc, char** argv) {
         MPI_Bcast(&current_config, sizeof(SystemConfig), MPI_BYTE, 0, MPI_COMM_WORLD);
 
         if (command == 1) {
-            double local_sum = 0.0;
-
             // Split the workload evenly among ACTIVE workers
             long long total = current_config.total_numbers;
             long long chunk = total / world_size;
             
             long long start_range = (world_rank * chunk) + 1;
-            // Handle remainder truncation on the last active worker
             long long end_range = (world_rank == world_size - 1) ? total + 1 : start_range + chunk;
             
-            omp_set_num_threads(current_config.active_cores);
-            #pragma omp parallel for reduction(+:local_sum)
-            for (long long i = start_range; i < end_range; i++) {
-                local_sum += std::sqrt(i);
-            }
-
-            double global_sum = 0.0;
+            double local_sum = compute_parallel_sqrt_sum(start_range, end_range, current_config.active_cores);
+            double global_sum = 0;
             MPI_Reduce(&local_sum, &global_sum, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 
             std::cout << "Container Rank " << world_rank << " computed range [" 
