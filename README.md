@@ -1,32 +1,33 @@
 # Implementasi Komputasi Paralel dan Sistem Terdistribusi untuk Penjumlahan Bilangan Akar
 
-Program untuk menghitung penjumlahan akar (*square root*) dari 1 sampai *n* menggunakan komputasi paralel dan sistem terdistribusi. Dibuat untuk memenuhi tugas Final Project - Komputasi Paralel dan Terdistribusi 2025/2026.
+Program untuk menghitung penjumlahan akar (*square root*) dari 1 sampai *n* menggunakan komputasi paralel (`OpenMP`) dan sistem terdistribusi (`OpenMPI`). Dibuat untuk memenuhi tugas Final Project - Komputasi Paralel dan Terdistribusi 2025/2026.
 
 ### Konsep yang digunakan
 1. Komputasi Terdistribusi (*parallel computing*): memproses secara bersamaan menggunakan beberapa *threads/cores* sekaligus
-2. Sistem Terdistribusi (*distributed system*): membagi data yang akan diproses ke beberapa *worker*
+2. Sistem Terdistribusi (*distributed system*): membagikan data ke beberapa *workers*
 
 ### Skema kasar 
 ```mermaid
 flowchart LR
-  A([Start]) --> B(Input data yang akan diproses)
-  B --> C["`Algoritma untuk **mendsitribusikan**  data secara rata`"] 
+  A([Start]) --> B("`Input data konfigurasi *total_numbers* dan *active_cores*`")
+  B --> C["`*Broadcast* konfigurasi ke seluruh *workers*`"] 
   C --> 
-    D["`**Worker 1:** 
-    * Core 1
-    * Core n`"] & E["`**Worker 2:** 
-    * Core 1
-    * Core n`"] & F["`**Worker n:** 
-    * Core 1
-    * Core n`"]
-  D & E & F --> G[Output hasil yang digabungkan] 
+    D["`Proses *master*`"] & E["`Proses *worker 1*`"] & F["`Proses *worker n*`"]
+  D & E & F --> G["`Output hasil yang digabungkan (*reduce*)`"] 
   G --> Z([end])
 ```
 
-1. Melakukan input data yang ingin diproses. `contoh: input data angka 1 sampai 1.000.000.000 (satu miliar)`
-2. Membagi (mendsitribusikan) data secara rata ke beberapa *worker*. `contoh: jika ada 2 worker, maka worker1 akan mendapatkan angka 1 - 500.000.000 (lima ratus ribu), sedangkan worker2 akan mendapatkan angka 500.000.001 (lima ratus ribu satu) - 1.000.000.000 (satu miliar)`
-3. *Worker* memproses data secara palalel menggunakan beberapa *threads/cores* sekaligus: `contoh: worker melakukan penjumlahan akar (square root) dari 1 sampai 1.000.000.000 (satu miliar) menggunakan beberapa threads/cores`
-4. Menggabungkan kembali hasil yang ada pada seluruh *worker*: `contoh: hasil perhitungan pada masing-masing worker digabung menjadi satu`
+1. Melakukan input data (berupa `total_numbers` dan `active_cores`)
+    * `total_numbers = 1.000.000.000 (satu miliar)`
+    * `active_cores = 4`
+2. Mem-*broadcast* (mengirimkan/menyiarkan konfigurasi) data ke seluruh *workers*
+    * misal terdapat 1 master (`master`) dan 1 workers (`worker1`)
+3. *Worker* memproses data pada *range* tertentu berdasarkan `rank`-nya secara palalel menggunakan beberapa *threads/cores* 
+    * `master: start = 1; end = 5.000.000`
+    * `worker2: start = 5.000.001; end = 1.000.000.000`
+    * masing-masing *workers* `#pragma omp parallel for num_threads(active_cores) (i = start; i < end; i++)`
+4. Menggabungkan kembali seluruh hasil: 
+    * menggunakan `MPI_Reduce()`
 
 ## Development
 ### Docker:
@@ -41,8 +42,12 @@ flowchart LR
 * Berhentikan container: `podman-compose down`
 ### Run
 * Compile program: `make`
-* Run program: `mpirun --host mpi-master,mpi-worker1,mpi-worker2 --map-by node -n 3 bin/main`
 * Test program: `bin/test`
+* Run program: `mpirun --host mpi-master,mpi-worker1,mpi-worker2 --map-by node -n 3 bin/main`
+  * Ubah `-n 3` menjadi `-n 2` atau `-n 1` untuk konfigurasi 2 atau 1 *worker*
+  * Tambahkan *argument* `100000000 4` di bagian akhir untuk konfigurasi `total_numbers` dan `active_cores`. 
+    * `mpirun --host mpi-master,mpi-worker1,mpi-worker2 --map-by node -n 3 bin/main 1000000000 4`
+    * `mpirun --host mpi-master,mpi-worker1,mpi-worker2 --map-by node -n 3 bin/main 5000000000 8`
 
 ## Kontributor
 1. Khairullah (2430306030012)
