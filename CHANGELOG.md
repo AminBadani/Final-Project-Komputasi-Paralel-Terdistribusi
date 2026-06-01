@@ -1,22 +1,21 @@
-## Progress Log — [19 Mei 2026]
+## Progress Log — [1 Juni 2026]
 
 ### Dikerjakan Hari Ini
-- Impelementasi testing sederhana untuk test akurasi (static = hasil kalkulasi) dan test scalabilitas (core = 1 | cores = 4)
-- Fix bug: -
+- Perubahan struktur kode program;
+    - menghilangkan menu dan mengganti dengan input *argument* `total_numbers = argv[1]` dan `active_workers = argv[2]` sebelum *running*
+    - menambahkan `send-receive` hasil dari *workers* ke *master* 
+- Fix bug: menyelesaikan *bug* `std::cout` dari *workers* yang terlambat di tampilkan
 - Unit test: akurasi; skalabilitas;
 
 ### Kendala / Blockers
-- Deskripsi: 
-    1. `std::cout` pada *workers* lambat, terkadang output baru muncul pada perulangan berikutnya
-    2. Belum ada test *edge case* (null, 0, negatif)
+- Deskripsi: -
 - Solusi: -
 
 ### Rencana Besok
-- Menyelesaikan masalah `std::cout` yang terlambat ditampilkan
 - Implementasi testing *edge case*
-- Membuat mekanisme untuk tetap melanjutkan program ketika tipe data yang diisi ke dalam input tidak sesuai 
+- Implementasi checkpoint: replikasi `local_sum`, *send* dari *workers* ke *master* setiap `n` detik
 
 ### Commit Hari Ini
-- feat: Implementasi test akurasi dan tes skalabilitas
-- fix: -
-- test: akurasi (PASS) dan skalabilitas (PASS)
+- feat: Perubahan struktur program dengan menghilangkan menu
+- fix: Memperbaiki `std::cout` hasil *workers* yang terlambat ditampilkan
+- test: akurasi (PASS); skalabilitas (PASS);

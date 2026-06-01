@@ -24,7 +24,7 @@ flowchart LR
     * misal terdapat 1 master (`master`) dan 1 workers (`worker1`)
 3. *Worker* memproses data pada *range* tertentu berdasarkan `rank`-nya secara palalel menggunakan beberapa *threads/cores* 
     * `master: start = 1; end = 5.000.000`
-    * `worker2: start = 5.000.001; end = 1.000.000.000`
+    * `worker1: start = 5.000.001; end = 1.000.000.000`
     * masing-masing *workers* `#pragma omp parallel for num_threads(active_cores) (i = start; i < end; i++)`
 4. Menggabungkan kembali seluruh hasil: 
     * menggunakan `MPI_Reduce()`

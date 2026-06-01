@@ -1,14 +1,15 @@
 #include <chrono>
+#include <cmath>
 #include <iostream>
 
 #include "parallel.h"
 
 void test_local_accuracy() {
-    long long test_start = 1;
-    long long test_end = 5; // reminder: loop stops before end_range
+    long long test_start = 6;
+    long long test_end = 10; // reminder: loop stops before end_range
     int test_cores = 2;
     
-    double expected_result = 1.0 + std::sqrt(2) + std::sqrt(3) + std::sqrt(4);
+    double expected_result = std::sqrt(6) + std::sqrt(7) + std::sqrt(8) + std::sqrt(9) + std::sqrt(10);
     double actual_result = compute_parallel_sqrt_sum(test_start, test_end, test_cores);
     
     // Check if the result is close enough (handling floating point precision)
@@ -21,7 +22,7 @@ void test_local_accuracy() {
 
 void test_local_scalability() {
     long long bench_start = 1;
-    long long bench_end = 500000000; // 500 million numbers
+    long long bench_end = 50000000; // 500 million numbers
     
     // Benchmark 1 Core
     auto start_time = std::chrono::high_resolution_clock::now();

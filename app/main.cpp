@@ -3,52 +3,15 @@
 #include <iostream>
 #include <omp.h>
 #include <mpi.h>
+#include <string>
+#include <chrono>
 
 #include "parallel.h"
 
 struct SystemConfig {
-    long long total_numbers;
-    int active_cores;
-    bool exit_signal;
+    long long total_numbers = 1000000000;
+    int active_cores = 4;
 };
-
-void clearscreen() {
-    std::cout << "\033[2J\033[1;1H";
-}
-
-void show_menu(SystemConfig &config) {
-    std::cout << "\n---- Program Menjumlahkan Bilangan Akar ----\n";
-    std::cout << "Target N: " << config.total_numbers << "\n";
-    std::cout << "Cores: " << config.active_cores << "\n";
-    
-    std::cout << "-- Menu --\n";
-    std::cout << "1). Jumlahkan bilangan akar\n";
-    std::cout << "2). Edit konfigurasi\n";
-    std::cout << "3). Exit\n";
-
-    std::cout << "Masukkan pilihan (1, 2, 3): ";
-
-    int pilihan;
-    std::cin >> pilihan;
-
-    if (pilihan == 1) {
-        config.exit_signal = false;
-
-    } else if (pilihan == 2) {
-        std::cout << "Enter target number count: ";
-        std::cin >> config.total_numbers;
-        
-        std::cout << "Enter active cores count (OpenMP threads): ";
-        std::cin >> config.active_cores;
-        
-        config.exit_signal = false;
-        
-    } else if (pilihan == 3) {
-        config.exit_signal = true;
-    }
-}
-
-
 
 int main(int argc, char** argv) {
     MPI_Init(&argc, &argv);
@@ -57,68 +20,84 @@ int main(int argc, char** argv) {
     int world_size;
     int world_len;
     char current_node_name[MPI_MAX_PROCESSOR_NAME];
+    SystemConfig current_config;
 
     MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
     MPI_Comm_size(MPI_COMM_WORLD, &world_size);
     MPI_Get_processor_name( current_node_name, &world_len );
     current_node_name[world_len] = '\0';
     
-    if (world_rank == 0) {
+    if (world_rank != 0) {
+        // Send name from worker
+        MPI_Send(current_node_name, MPI_MAX_PROCESSOR_NAME, MPI_CHAR, 0, 0, MPI_COMM_WORLD);
+
+    } else {
         printf("\n-- Containers count: %d\n", world_size);
         printf("Master node (rank %d) is running on container: %s\n", world_rank, current_node_name);
 
-        // Master collects names from all other ranks
+        // Master collects names from all other ranks (from other workers)
         char worker_node_name[MPI_MAX_PROCESSOR_NAME];
         for (int i = 1; i < world_size; i++) {
             MPI_Recv(worker_node_name, MPI_MAX_PROCESSOR_NAME, MPI_CHAR, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             printf("Worker node (rank %d) is running on container: %s\n", i, worker_node_name);
         }
-    } else {
-        MPI_Send(current_node_name, MPI_MAX_PROCESSOR_NAME, MPI_CHAR, 0, 0, MPI_COMM_WORLD);
+
+        // Initialize config on master
+        current_config = SystemConfig{
+            .total_numbers=( argc > 1 ? std::stoll(argv[1]) : 1000000000 ), 
+            .active_cores=( argc > 2 ? ( std::stoi(argv[2]) > 8 ? 8 : std::stoi(argv[2]) ) : 4 )
+        };
     }
 
-    SystemConfig current_config = SystemConfig{10000000000, 4, false};
-    bool system_running = true;
+    // Start time 
+    auto start_time = std::chrono::high_resolution_clock::now();
 
-    while (system_running == true) {
-        int command = 0; // 0 = idle; 1 = execute; 2 = exit
+    // 2. Broadcast the config from Master (0) to ALL workers
+    MPI_Bcast(&current_config, sizeof(SystemConfig), MPI_BYTE, 0, MPI_COMM_WORLD);
 
-        if (world_rank == 0) {
-            show_menu(current_config);
-            if (current_config.exit_signal == true) command = 2;
-            else command = 1;
+    // Split the workload evenly to workers
+    long long chunk = current_config.total_numbers / world_size;
+    long long start = (world_rank * chunk) + 1;
+    long long end = (world_rank == world_size - 1) ? current_config.total_numbers : start + chunk - 1;
+
+    // Process local sum on eachy workers
+    double local_sum = compute_parallel_sqrt_sum(start, end, current_config.active_cores);
+    if (world_rank != 0) {
+        long long local_range[2] = {start, end};
+        MPI_Send(&local_sum, 1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD);
+        MPI_Send(local_range, 2, MPI_LONG_LONG, 0, 2, MPI_COMM_WORLD);
+    }
+
+    // Reduce to Master
+    double global_sum = 0;
+    MPI_Reduce(&local_sum, &global_sum, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+
+    // End time
+    auto end_time = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> duration = end_time - start_time;
+
+    if (world_rank == 0) {
+        // Print from Master
+        std::cout << "\nContainer Rank " << 0 << " computed range [" 
+                << start << " to " << end
+                << "] using " << current_config.active_cores << " cores. Local Sum: " << std::fixed << local_sum << "\n";
+
+        // Send each workers result to Master
+        double worker_sum;
+        long long worker_range[2];
+        for (int i = 1; i < world_size; i++) {
+            MPI_Recv(&worker_sum, 1, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            MPI_Recv(worker_range, 2, MPI_LONG_LONG, i, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            long long worker_start = worker_range[0];
+            long long worker_end = worker_range[1];
+
+            std::cout << "Container Rank " << i << " computed range [" 
+                << worker_start << " to " << worker_end
+                << "] using " << current_config.active_cores << " cores. Local Sum: " << std::fixed << worker_sum << "\n";
         }
 
-        // 2. Broadcast the command and config from Master (0) to ALL workers
-        MPI_Bcast(&command, 1, MPI_INT, 0, MPI_COMM_WORLD);
-        MPI_Bcast(&current_config, sizeof(SystemConfig), MPI_BYTE, 0, MPI_COMM_WORLD);
-
-        if (command == 1) {
-            // Split the workload evenly among ACTIVE workers
-            long long total = current_config.total_numbers;
-            long long chunk = total / world_size;
-            
-            long long start_range = (world_rank * chunk) + 1;
-            long long end_range = (world_rank == world_size - 1) ? total + 1 : start_range + chunk;
-            
-            double local_sum = compute_parallel_sqrt_sum(start_range, end_range, current_config.active_cores);
-            double global_sum = 0;
-            MPI_Reduce(&local_sum, &global_sum, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-
-            std::cout << "Container Rank " << world_rank << " computed range [" 
-                          << start_range << " to " << (end_range - 1) 
-                          << "] using " << current_config.active_cores << " cores. Local Sum: " << local_sum << "\n";
-
-            if (world_rank == 0) {
-                std::cout << "\n>>> TOTAL DISTRIBUTED SUM: " << std::fixed << global_sum << " <<<\n";
-            }
-
-            MPI_Barrier(MPI_COMM_WORLD);
-
-        } else if (command == 2) {
-            system_running = false;
-            break;
-        }
+        std::cout << "\n--- TOTAL DISTRIBUTED SUM: " << std::fixed << global_sum << "\n";
+        std::cout << "--- TOTAL TIME:  " << duration.count() << " seconds.\n";
     }
 
     MPI_Finalize();
