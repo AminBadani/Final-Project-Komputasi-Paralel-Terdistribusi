@@ -43,11 +43,11 @@ flowchart LR
 ### Run
 * Compile program: `make`
 * Test program: `bin/test`
-* Run program: `mpirun --host mpi-master,mpi-worker1,mpi-worker2 --map-by node -n 3 bin/main`
+* Run program: `mpirun --host mpi-master,mpi-worker1,mpi-worker2 --map-by node --bind-to none -n 3 bin/main`
   * Ubah `-n 3` menjadi `-n 2` atau `-n 1` untuk konfigurasi 2 atau 1 *worker*
   * Tambahkan *argument* `100000000 4` di bagian akhir untuk konfigurasi `total_numbers` dan `active_cores`. 
-    * `mpirun --host mpi-master,mpi-worker1,mpi-worker2 --map-by node -n 3 bin/main 1000000000 4`
-    * `mpirun --host mpi-master,mpi-worker1,mpi-worker2 --map-by node -n 3 bin/main 5000000000 8`
+    * `mpirun --host mpi-master,mpi-worker1,mpi-worker2 --map-by node --bind-to none -n 3 bin/main 1000000000 4`
+    * `mpirun --host mpi-master,mpi-worker1,mpi-worker2 --map-by node --bind-to none -n 3 bin/main 5000000000 8`
 
 ## Kontributor
 1. Khairullah (2430306030012)
