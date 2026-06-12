@@ -1,3 +1,5 @@
+# Laporan akhir: [Laporan akhir - versi Docker Container](public/laporan-akhir-docker-container.pdf)
+
 # Implementasi Komputasi Paralel dan Sistem Terdistribusi untuk Penjumlahan Bilangan Akar
 
 Program untuk menghitung penjumlahan akar (*square root*) dari 1 sampai *n* menggunakan komputasi paralel (`OpenMP`) dan sistem terdistribusi (`OpenMPI`). Dibuat untuk memenuhi tugas Final Project - Komputasi Paralel dan Terdistribusi 2025/2026.
